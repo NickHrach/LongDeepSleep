@@ -23,10 +23,10 @@ During development, I encountered several challenges related to deep sleep on ES
 ### ✅ Solutions implemented in this library
 
 - **RTC memory usage**:  
-  Persistent state is stored in RTC memory, allowing coordinated long-duration sleep using multiple shorter cycles on ESP8266 (or extended sleep logic on ESP32).
+  Persistent state is stored in RTC memory, allowing coordinated long-duration sleep using multiple shorter cycles on ESP8266.
 
 - **Absolute time-based sleep scheduling**:  
-  A time server (e.g. NTP) is used to determine the absolute target wake-up time, compensating for RTC drift and temperature-based inaccuracies.
+  A time server (e.g. NTP) is used to determine the absolute target wake-up time, compensating for RTC drifts.
 
 - **Selective WiFi activation**:  
   The system only enables WiFi when absolutely necessary, significantly reducing power usage during wake-up.
@@ -36,7 +36,7 @@ During development, I encountered several challenges related to deep sleep on ES
 
 ---
 
-This library abstracts these patterns into a simple interface, making it easier to build reliable, ultra-low-power projects based on ESP8266 and ESP32.
+This library abstracts these patterns into a simple interface, making it easier to build reliable, ultra-low-power projects based on ESP8266 (and ESP32).
 
 ## Usage
 
@@ -44,10 +44,10 @@ Using `LongDeepSleep` is simple and efficient. After including the library and s
 
 ### 🔧 Setup
 
-1. Create an `NTPClient` (can be local or public).
-2. Instantiate a `LongDeepSleep` class object with your WiFi credentials and NTP client.
+1. Create an `NTPClient` (can be local or public), only required for absolute deep sleep feature.
+2. Instantiate a `LongDeepSleep` class object with your WiFi credentials and NTP client (can be null if not required).
 3. Call `checkWakeUp()` as the very first line in `setup()` to determine the wake-up reason and perform deep sleep extensions if required.
-4. Then perform the task you want to do after wake-up. You can even distinguish between different wake-up reasons (rest button, errors, long deep sleep end)
+4. Then perform the task you want to do after wake-up. You can even distinguish between different wake-up reasons (reset button, errors, long deep sleep end)
 5. Use `performLongDeepSleep()` or `performLongDeepSleepUntil()` accordingly to go into next long deep sleep.
 
 ### 📌 Key Functions
