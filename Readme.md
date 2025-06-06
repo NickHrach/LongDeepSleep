@@ -81,13 +81,13 @@ NTPClient timeClient(ntpUDP, "192.168.178.1", 3600, 60000);
 LongDeepSleep lds(ssid, password, &timeClient);
 
 void setup() {
-  int wakeupResult = lds.checkWakeUp(0);
+  int wakeupResult = lds.checkWakeUp();
 
   if (wakeupResult == LongDeepSleep::DEEP_SLEEP_DONE) {
     D_println("Woke up from long deep sleep!");
   }
 	
-  // When returning from deep sleep w/o 
+  // When returning from deep sleep w/o wifi reactiving which isonly done when returning from ...sleepUntil().
   lds.restoreWifi();
 
   // Determine target time (e.g. 03:00 next day)
