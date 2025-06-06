@@ -1,4 +1,5 @@
 #include "LongDeepSleep.h"
+##define _DEBUG_ 1 
 #include "SwitchableSerial.h"
 
 const char* ssid = "YOUR SSID";
