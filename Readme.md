@@ -65,6 +65,7 @@ Using `LongDeepSleep` is simple and efficient. After including the library and s
 
 ```cpp
 #include "LongDeepSleep.h"
+#define _DEBUG_ 1 
 #include "SwitchableSerial.h"
 #include <WiFiUdp.h>
 #include <NTPClient.h>
