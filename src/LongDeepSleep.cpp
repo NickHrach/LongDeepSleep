@@ -1,0 +1,305 @@
+#include "LongDeepSleep.h"
+#define _DEBUG_ 1 
+#include "SwitchableSerial.h"
+
+  LongDeepSleep::LongDeepSleep(const char* ssid, const char* password, NTPClient* ntpClient)
+    :wifiSsid(ssid),wifiPassword(password),timeClient(ntpClient)
+  {
+    RTCmemoryValid=readFromRTCmemory();
+  }
+  
+  int LongDeepSleep::checkWakeUp(uint32_t toleranceSec, uint16_t failureSleepSecs)
+  {
+	// same baud rate as boot process info
+    // Be aware that this Serial.Begin will only be executed, if Serial was not already begun with any other valid baudrate!
+	// See MAKRO definition for details in "SwitchableSerial.h"
+	D_init(74880);
+    D_println(F("\n----------------------------------"));
+    D_print(F("millis:")); D_println(millis());
+    struct rst_info *rstInfo = system_get_rst_info();
+    D_print(F("restart reason:"));
+    D_println(rstInfo->reason);
+    // Return false in case this is not wake up from deep sleep
+    if (rstInfo->reason!=5) return OTHER_WAKE_UP_REASON;
+
+    if (!RTCmemoryValid) 
+    {
+      // oops, RTC memory compromised, let's restart as if we did not get regualarly out of deep sleep.
+      D_println(F("RTC memory content failed CRC check!"));
+      return RTC_MEMORY_CHECK_FAILED;
+    }
+  
+    if (rtcData.remainingSleepTimeUs==0) 
+		// We could check for tolerance value also, but then Wifi would not work. We need another deepsleep with WAKE_RF_DEFAULT
+    {
+		// check for absolute time target
+        if (rtcData.sleepUntilEpocheTime == 0)
+        {
+            // no absolute time specified, we are done
+            D_println(F("long relative deep sleep done."));
+			// Be aware that Wifi is not restored here before we return.
+            return DEEP_SLEEP_DONE;
+        }
+        D_println(F("relative long sleep done. Checking absolute time ..."));
+        // get WLAN up and contact time server to get current time
+        restoreWifi(failureSleepSecs);
+        // here, we obviously did not go into deepsleep again, hence we need to check the time server
+        unsigned long now = timeClient->getEpochTime();
+		// timezone corrections might lead to a value > 0, hence allow a 2 days offset.
+        if (now < (48*3600)) return ABSOLUTE_TIME_CHECK_FAILED;
+        // calculate diff time is our sleep time in secs
+        int64_t sleepTimeSec = rtcData.sleepUntilEpocheTime;
+		
+		//D_print("Epoche Target:");D_println(sleepTimeSec);
+		//D_print("Epoche now:");D_println(now);
+		sleepTimeSec = sleepTimeSec-now;
+		//D_print("Epoche diff:");D_println(sleepTimeSec);
+		
+        if (sleepTimeSec<=toleranceSec)
+        {
+			// Yes, we are there!
+          D_println(F("Absolute time elapsed."));
+          return DEEP_SLEEP_DONE;
+        }
+		char buffer[30];
+		D_print(F("Target time:"));D_println(timeClient->time2string(rtcData.sleepUntilEpocheTime,buffer,false));
+		D_print(F("Still remaining time in secs:"));D_println(sleepTimeSec);
+        // otherwise perform LongDeepSleep again for rest of time
+        saveRTCAndCallLongDeepSleep(1000000ULL*sleepTimeSec);
+        // Never reach this point
+		return -1;
+    }
+    D_print(F("Long deep sleep not finally done. Remaining sleep time is:"));D_print((uint32_t)(rtcData.remainingSleepTimeUs/1e6));D_println(F(" secs."));
+    saveRTCAndCallLongDeepSleep(rtcData.remainingSleepTimeUs);
+    return -1; // this will never happen as the last function call will end in deep sleep.
+  }
+
+
+  void LongDeepSleep::saveRTCAndCallLongDeepSleep(uint64_t sleepTimeUs)
+  {
+    uint64_t maxValue=ESP.deepSleepMax()-10e6; // make this 5e6 for 5 secs test purposes // reduce by 10 sec to be on the save side.
+  
+    if (sleepTimeUs>maxValue)
+    {
+      rtcData.remainingSleepTimeUs=sleepTimeUs-maxValue;
+      sleepTimeUs=maxValue;
+    } 
+    else
+    {
+      rtcData.remainingSleepTimeUs=0;
+    }
+    releaseWifi();
+    writeRTCmemory();
+    //if (rtcData.remainingSleepTimeUs>0)
+    D_print(F("Going into DEEP SLEEP FOR USECS:"));
+    D_println(sleepTimeUs);
+    D_print(F("Total uptime (ms):"));
+    D_println(millis());
+    D_println(F("#####################"));
+    /*
+	// Used this to see how much runtime differs, when debug messages are not printed to serial.
+	// It's about 10ms 
+	// My measurements for LongDeepSleepExample (with debug on)
+	// ~60ms when directly extending long deep sleep
+	// ~1250ms when checking time from timeserver and then returning into deepsleep in case Wifi can be directly restored
+	// ~4500ms when checking time from timeserver and then returning into deepsleep in case Wifi cannot be directly restored
+    Serial.begin(74880);
+    Serial.print(F("\nTotal uptime (ms):"));
+    Serial.println(millis());
+    Serial.println(F("#####################"));
+    */
+	// This is for debug purposes only:
+	//sleepTimeUs=5000000;
+    if (rtcData.remainingSleepTimeUs)
+      ESP.deepSleep(sleepTimeUs, WAKE_RF_DISABLED);
+    else
+      ESP.deepSleep(sleepTimeUs, WAKE_RF_DEFAULT);
+  // does not return
+  }
+
+  void LongDeepSleep::performLongDeepSleep(uint64_t sleepTimeSec)
+  {
+	D_print(F("arranging long deep sleep for secs:"));D_println(sleepTimeSec);
+    rtcData.sleepUntilEpocheTime=0;
+    saveRTCAndCallLongDeepSleep(sleepTimeSec*1e6); // This takes usec as parameter
+  }
+
+  void LongDeepSleep::performLongDeepSleepUntil(uint64_t epocheTime)
+  {
+    if (timeClient==NULL) return;
+    unsigned long now = timeClient->getEpochTime();
+    // let's assume there is time gone since ntpTime was initialized, but never got an absolute update
+	// Also consider shifts by user defined timezones
+    if (now < (48*3600)) return;
+    
+    // write target time to struct so we can check against it later when woken up
+    rtcData.sleepUntilEpocheTime=epocheTime;
+      
+    // calculate diff time is our sleep time in secs
+    uint64_t sleepTimeSec = epocheTime - now;
+	char buffer[30];
+	D_print(F("perform long Sleep until:"));D_println(timeClient->time2string(epocheTime,buffer,false));
+
+    // call performLongDeepSleep
+    saveRTCAndCallLongDeepSleep(sleepTimeSec*1e6);
+  }
+
+  void LongDeepSleep::restoreWifi(uint16_t failureSleepSecs)
+  {
+    
+    // immediately return in case we are already connected.
+    if (WiFi.status() == WL_CONNECTED) return;
+
+    bool quickConnect=false;
+ 
+	D_println(F("Restoring Wifi ..."));
+	if (!WiFi.resumeFromShutdown(rtcData.wifiState))
+	{
+		D_println(F("Cannot restore Wifi")); 
+	}
+	else
+	{
+		quickConnect=true;
+	}
+    
+	if (!quickConnect)
+    {
+      D_printf("Try to connect to Wifi %s\n", wifiSsid);
+      // The RTC data was not valid, so make a regular connection
+       //resetWifi();
+      WiFi.persistent(false);
+      WiFi.mode(WIFI_STA);
+      WiFi.begin(wifiSsid, wifiPassword);
+    }
+
+    int retries = 0;
+    int wifiStatus = WiFi.status();
+    while( wifiStatus != WL_CONNECTED ) 
+    {
+      retries++;
+      // print a dot every 50 msec
+    #ifdef _DEBUG_
+      if ((retries%20)==0) {D_print(F("."));D_print(wifiStatus);}
+    #endif
+
+      if (quickConnect && (retries == maxQuickConnectCycles)) 
+      {
+        // Quick connect is not working, reset WiFi and try regular connection
+        D_println(F("\nQuick connect failed."));
+        D_printf("Try to connect to Wifi %s\n", wifiSsid);
+        resetWifi();
+        WiFi.begin(wifiSsid,wifiPassword);
+      }
+      if( retries == maxWifiWaitCycles ) 
+      {
+        // Giving up Wifi connection
+        D_println(F("\nNot able to connect to Wifi."));
+        WiFi.disconnect(true);
+        delay(1);
+        WiFi.mode(WIFI_OFF);
+        if (failureSleepSecs>0)
+        {
+          D_printf("Try again in %u seconds.", failureSleepSecs);
+          
+          // no need to recalculate anything or rewrite RTC memory, hence calling directly ESP.deepSleep.
+          ESP.deepSleep(1000000ULL*failureSleepSecs, WAKE_RF_DEFAULT );
+        }
+      } 
+      delay(10); // one cylce is 10ms.
+      wifiStatus = WiFi.status();
+    }
+    D_println(F("\nSuccessfully connected to Wifi."));
+    D_print(F("IP Address: "));D_println(WiFi.localIP());
+    D_print(F("Gateway IP: "));D_println(WiFi.gatewayIP());
+    D_print(F("BSSID: "));D_println(WiFi.BSSIDstr());
+    D_print(F("Channel: "));D_println(WiFi.channel());
+
+    if (timeClient)
+    {
+      timeClient->begin();
+      if (!timeClient->forceUpdate())
+      {
+        D_println(F("Time server not reachable!"))  ;
+      }
+    #ifdef _DEBUG_
+      char timeStr[50];
+      timeClient->getFormattedDateTime(timeStr, true);
+      D_print(F("Current time: "));
+      D_println(timeStr);
+    #endif
+    }
+  }
+
+  void LongDeepSleep::releaseWifi()
+  {
+    if (WiFi.isConnected())
+    {
+		D_println(F("Wifi save and shutdown"));
+		WiFi.shutdown(rtcData.wifiState);
+	}
+  }
+
+  void LongDeepSleep::resetWifi()
+  {
+    D_println(F("reset Wifi HW"));
+    WiFi.disconnect();
+    delay(5);
+    WiFi.forceSleepBegin();
+    delay(5);
+    WiFi.forceSleepWake();
+    delay(5);
+  }
+
+  bool LongDeepSleep::readFromRTCmemory()
+  {
+    D_println(F("read Info from RTC memory"));
+    if (ESP.rtcUserMemoryRead(0,(uint32_t*)&rtcData, sizeof(rtcData))) 
+    {
+      // Calculate the CRC of what we just read from RTC memory, but skip the first 4 bytes as that's the checksum itself.
+      uint32_t crc = calculateCRC32( ((uint8_t*)&rtcData) + 4, sizeof( rtcData ) - 4 );
+      if (crc == rtcData.crc32)
+      {
+        D_println(F("CRC check ok."));
+        return true;
+      }
+      else
+      {
+        D_println(F("CRC check failed."));
+        return false;
+      }
+    }
+    
+    D_println(F("Reading RTC memory failed."));
+    return false;
+  }
+
+  void LongDeepSleep::writeRTCmemory()
+  {
+    D_println(F("write Info to RTC memory"));
+    rtcData.crc32 = calculateCRC32( ((uint8_t*)&rtcData) + 4, sizeof( rtcData ) - 4 );
+    ESP.rtcUserMemoryWrite( 0, (uint32_t*)&rtcData, sizeof( rtcData ) );
+  }
+
+  uint32_t LongDeepSleep::calculateCRC32( const uint8_t *data, size_t length ) 
+  {
+    uint32_t crc = 0xffffffff;
+    while( length-- ) 
+    {
+      uint8_t c = *data++;
+      for( uint32_t i = 0x80; i > 0; i >>= 1 ) 
+      {
+        bool bit = crc & 0x80000000;
+        if( c & i ) 
+        {
+          bit = !bit;
+        }
+
+        crc <<= 1;
+        if( bit ) 
+        {
+          crc ^= 0x04c11db7;
+        }
+      }
+    }
+  return crc;
+}
