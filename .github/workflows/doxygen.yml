@@ -1,4 +1,4 @@
-name: Generate Doxygen Documentation
+name: Generate Doxygen Docs
 
 on:
   push:
@@ -6,9 +6,8 @@ on:
       - main
 
 jobs:
-  generate-docs:
+  doxygen:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -16,11 +15,21 @@ jobs:
       - name: Install Doxygen
         run: sudo apt-get install doxygen -y
 
-      - name: Generate Doxygen documentation
+      - name: Generate Documentation
         run: doxygen Doxyfile
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs/html
+      - name: Deploy to docs/ folder
+        run: |
+          mkdir -p tmp-docs
+          mv docs/html/* tmp-docs/
+          rm -rf docs
+          mkdir docs
+          mv tmp-docs/* docs/
+
+      - name: Commit and push documentation
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add docs
+          git commit -m "Update documentation" || echo "No changes to commit"
+          git push
