@@ -117,4 +117,4 @@ void loop() {
     A great overview of power consumption by different versions of Wemos D1 mini modules in deep sleep. 
 - https://randomnerdtutorials.com/esp8266-nodemcu-date-time-ntp-client-server-arduino/
 	
-    Overview over NTP client usage. Most gateway devices like Fritzbox are also able to be used as local time server.  (
+    Overview over NTP client usage. Most gateway devices like Fritzbox are also able to be used as local time server.
