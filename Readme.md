@@ -45,7 +45,7 @@ Using `LongDeepSleep` is simple and efficient. After including the library and s
 ### 🔧 Setup
 
 1. Create an `NTPClient` (can be local or public), only required for absolute deep sleep feature.
-2. Instantiate a `LongDeepSleep` class object with your WiFi credentials and NTP client (can be null if not required).
+2. Instantiate a `LongDeepSleep` class object with your WiFi credentials and NTP client.
 3. Call `checkWakeUp()` as the very first line in `setup()` to determine the wake-up reason and perform deep sleep extensions if required.
 4. Then perform the task you want to do after wake-up. You can even distinguish between different wake-up reasons (reset button, errors, long deep sleep end)
 5. Use `performLongDeepSleep()` or `performLongDeepSleepUntil()` accordingly to go into next long deep sleep.
@@ -61,8 +61,37 @@ Using `LongDeepSleep` is simple and efficient. After including the library and s
 - `performLongDeepSleepUntil(unsigned long targetEpochTime)`:  
   Sleeps until a specific target time (UNIX timestamp, seconds since 1970-01-01, using multiple sleep cycles if needed.
 
-### 🧪 Example
+### 🧪 Examples
+#### Super Simple relaitve long deep sleep
+```cpp
+#include "LongDeepSleep.h"
+#define _DEBUG_ 1 
+#include "SwitchableSerial.h"
 
+// this instance handles all long deep sleep related stuff:
+// No Wifi or ntp client required if only using relative long deep sleep:
+LongDeepSleep lds();
+
+void setup() {
+  int wakeupResult = lds.checkWakeUp();
+  
+  if (wakeupResult == LongDeepSleep::DEEP_SLEEP_DONE) {
+    D_println("Woke up from long deep sleep!");
+  } else {
+    D_println("Woke up for another reason or determined an error!");
+  } 
+  
+  \\ do whatever you need here before returning to deepsleep.
+
+  lds.performLongDeepSleep(12 * 3600); // Sleep for apro. 12 hours. Can be significantly (1-2hours) shorter beacuse of RTC drifts!
+}
+
+void loop() {
+  // nothing here
+}
+```
+
+#### Wait until a specific absolute time
 ```cpp
 #include "LongDeepSleep.h"
 #define _DEBUG_ 1 
@@ -83,11 +112,15 @@ LongDeepSleep lds(ssid, password, &timeClient);
 void setup() {
   int wakeupResult = lds.checkWakeUp();
 
-  if (wakeupResult == LongDeepSleep::DEEP_SLEEP_DONE) {
-    D_println("Woke up from long deep sleep!");
-  }
-	
-  // When returning from deep sleep w/o wifi reactiving which isonly done when returning from ...sleepUntil().
+  if (wakeupResult == LongDeepSleep::DEEP_SLEEP_UNTIL_DONE) {
+    D_println("Woke up from long deep sleep until absolute time!");
+  } else if (wakeupResult == LongDeepSleep::DEEP_SLEEP_DONE) {
+    D_println("Woke up from long deep sleep relative time!");
+  } else {
+    D_println("Woke up for another reason or determined an error!");
+  } 
+
+  // When returning from deep sleep w/o wifi reactiving which is only done when returning from ...sleepUntil().
   lds.restoreWifi();
 
   // Determine target time (e.g. 03:00 next day)
