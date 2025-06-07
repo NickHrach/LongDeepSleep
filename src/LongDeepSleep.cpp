@@ -228,6 +228,13 @@
       if (!timeClient->forceUpdate())
       {
         D_println(F("Time server not reachable!"))  ;
+		if (failureSleepSecs>0)
+        {
+          D_printf("Try again in %u seconds.", failureSleepSecs);
+          
+          // no need to recalculate anything or rewrite RTC memory, hence calling directly ESP.deepSleep.
+          ESP.deepSleep(1000000ULL*failureSleepSecs, WAKE_RF_DEFAULT );
+		}
       }
     #ifdef _DEBUG_
       char timeStr[50];
