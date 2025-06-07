@@ -12,10 +12,11 @@ public:
 
   enum 
   {
-    DEEP_SLEEP_DONE = 0,      // wake up was done successfully, just proceed as planned
+    DEEP_SLEEP_DONE = 0,      // wake up was done successfully, just proceed as planned. Wifi is not restored yet.
+    DEEP_SLEEP_UNTIL_DONE = 0, // wake up was done successfully, just proceed as planned. Wifi and time server are already available!
     OTHER_WAKE_UP_REASON = 1, // The system was woken up for another reason, check system_get_rst_info()
     RTC_MEMORY_CHECK_FAILED =2, // RTC memory got corrupted or could not be read. Checking for long deep sleep is not possible
-    ABSOLUTE_TIME_CHECK_FAILED = 3, // An absolute target time was specified and the calculated relative time elapsed, but Wifi re-connection was not successfull. Hence no time server was reached. Absolute time check no possible.   
+    ABSOLUTE_TIME_CHECK_FAILED = 3, // An absolute target time was specified and the calculated relative time elapsed, but Wifi re-connection was not successfull and/or time server was not reached. Absolute time check was not possible.  
   };
 
 
@@ -58,6 +59,11 @@ public:
     switches Wifi off in order to reduce power consumption for further program execution without Wifi.
     */
 
+  /* This might be used to release Wifi earlier and perform other tasks, that do not need Wifi.
+	It's recommended to use the NTP time client also before this in order to calculate
+  */
+
+  void releaseWifi();
   /*
     Change the default wait cycles for Wifi reconnection purposes.
     1 cycles is 10ms. 
@@ -69,7 +75,6 @@ public:
     maxWifiWaitCycles=wifiWaitCycles;
   }
 
-  void releaseWifi();
   private:
   void saveRTCAndCallLongDeepSleep(uint64_t sleepTimeSec);
   bool readFromRTCmemory();
