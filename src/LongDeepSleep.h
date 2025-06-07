@@ -13,10 +13,10 @@ public:
   enum 
   {
     DEEP_SLEEP_DONE = 0,      // wake up was done successfully, just proceed as planned. Wifi is not restored yet.
-    DEEP_SLEEP_UNTIL_DONE = 0, // wake up was done successfully, just proceed as planned. Wifi and time server are already available!
-    OTHER_WAKE_UP_REASON = 1, // The system was woken up for another reason, check system_get_rst_info()
-    RTC_MEMORY_CHECK_FAILED =2, // RTC memory got corrupted or could not be read. Checking for long deep sleep is not possible
-    ABSOLUTE_TIME_CHECK_FAILED = 3, // An absolute target time was specified and the calculated relative time elapsed, but Wifi re-connection was not successfull and/or time server was not reached. Absolute time check was not possible.  
+    DEEP_SLEEP_UNTIL_DONE = 1, // wake up was done successfully, just proceed as planned. Wifi and time server are already available!
+    OTHER_WAKE_UP_REASON = -1, // The system was woken up for another reason, check system_get_rst_info()
+    RTC_MEMORY_CHECK_FAILED = -2, // RTC memory got corrupted or could not be read. Checking for long deep sleep is not possible
+    ABSOLUTE_TIME_CHECK_FAILED = -3, // An absolute target time was specified and the calculated relative time elapsed, but Wifi re-connection was not successfull and/or time server was not reached. Absolute time check was not possible.  
   };
 
 
