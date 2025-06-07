@@ -62,7 +62,7 @@ Using `LongDeepSleep` is simple and efficient. After including the library and s
   Sleeps until a specific target time (UNIX timestamp, seconds since 1970-01-01, using multiple sleep cycles if needed.
 
 ### 🧪 Examples
-#### Super Simple relaitve long deep sleep
+#### Super Simple relative long deep sleep
 ```cpp
 #include "LongDeepSleep.h"
 #define _DEBUG_ 1 
