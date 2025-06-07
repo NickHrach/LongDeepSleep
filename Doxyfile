@@ -1,5 +1,6 @@
 PROJECT_NAME           = "LongDeepSleep"
-OUTPUT_DIRECTORY       = docs
+OUTPUT_DIRECTORY       = doc
+HTML_OUTPUT 		   = html
 RECURSIVE              = YES
 EXTRACT_ALL            = YES
 GENERATE_LATEX         = NO
