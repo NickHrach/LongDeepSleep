@@ -1,113 +1,129 @@
 #ifndef _LONGDEEPSLEEP_H_
 #define _LONGDEEPSLEEP_H_
+
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 #include <NTPClient.h>
 #include <include/WiFiState.h>
 
+/**
+ * @brief A class for managing long deep sleep cycles with RTC memory and optimized WiFi reconnection on ESP8266.
+ *
+ * This class allows deep sleep durations beyond the hardware-imposed ~3.5-hour limit
+ * by using RTC memory to persist sleep state between wake-ups.
+ */
 class LongDeepSleep
 {
-
 public:
 
-  enum 
-  {
-    DEEP_SLEEP_DONE = 0,      // wake up was done successfully, just proceed as planned. Wifi is not restored yet.
-    DEEP_SLEEP_UNTIL_DONE = 1, // wake up was done successfully, just proceed as planned. Wifi and time server are already available!
-    OTHER_WAKE_UP_REASON = -1, // The system was woken up for another reason, check system_get_rst_info()
-    RTC_MEMORY_CHECK_FAILED = -2, // RTC memory got corrupted or could not be read. Checking for long deep sleep is not possible
-    ABSOLUTE_TIME_CHECK_FAILED = -3, // An absolute target time was specified and the calculated relative time elapsed, but Wifi re-connection was not successfull and/or time server was not reached. Absolute time check was not possible.  
-  };
+    /**
+     * @brief Return codes for checkWakeUp().
+     */
+    enum {
+        DEEP_SLEEP_DONE = 0,              ///< Wake-up completed, proceed. WiFi not yet restored.
+        DEEP_SLEEP_UNTIL_DONE = 1,        ///< Wake-up completed, WiFi and time server already available.
+        OTHER_WAKE_UP_REASON = -1,        ///< Wake-up due to other reason (reset, power-on, etc.).
+        RTC_MEMORY_CHECK_FAILED = -2,     ///< RTC memory is invalid or corrupted.
+        ABSOLUTE_TIME_CHECK_FAILED = -3   ///< Wake-up for absolute time failed due to time server/WiFi issues.
+    };
 
+    /**
+     * @brief Constructor.
+     * 
+     * @param ssid WiFi SSID. (optional in case no absolute time for deep sleep is rquired.)
+     * @param password WiFi password. (optional in case no absolute time for deep sleep is rquired.)
+     * @param ntpClient pointer to a configured NTPClient instance. (optional in case no absolute time for deep sleep is rquired.)
+     */
+    LongDeepSleep(const char* ssid = nullptr, const char* password = nullptr, NTPClient* ntpClient = nullptr);
 
-  LongDeepSleep(const char* ssid=0, const char* password=0, NTPClient* ntpClient=NULL);
-  /* Check whether this was a wakeup out of deepsleep
-    Returns true if the time elapsed and it was the end of a deep sleep
-    Returns false if it was another wakeup reason (hard reset etc.)
-    Does not return in case the deep sleep was not finalized and needed another deepsleep cycle.
-    Paremeter tolarenceSec allows a wakeup before the elapsed time or the absolue time
-    Indeed ESP.deepsleep does not exactly sleep the specified time as the RTC sleep time varies based on temperature and other influencing factors.
-    In case an absolute time is given by calling PerformLongDeepSleepUntil this funtion will try to reach out for a time server via Wifi and then perform another sleep in case it is required.
-    When going into deep sleep via PerformLongDeepSleep with a relative time this funtion will not use use Wifi
+    /**
+     * @brief Checks whether the device woke up from deep sleep and handles state. 
+     * 
+     * Depending on prior sleep configuration, may re-enter deep sleep if targeted sleep time is not elapsed (relative) or reached (absolute).
+     * 
+     * @param toleranceSec Allowed wake-up deviation in seconds (in case woke up a little bit earlier.)
+     * @param failureSleepSecs If >0, sleep this long again when wifi connection or time server (only if specified) update fails. This parameter is only relevant in case we got with performLongDeepSleepUntil method into deep sleep and woke up to get into this function.
+     * @return One of the enum codes above.
+     */
+    int checkWakeUp(uint32_t toleranceSec = 0, uint16_t failureSleepSecs = 0);
 
-    parameter failureSleepSecs is relevant in case an absolute time for wakeup was given.
-    In case it's >0 and no connection to timeserver is possible we will deep sleep for this amount of time again and then check again.
-    This is usefull if you can't do anyhting meaningful anyway. If this value is 0, the function returns with value NO_ABSOLUTE_TIME_CHECK_POSSIBLE 
-      */
-  int checkWakeUp(uint32_t toleranceSec=0, uint16_t failureSleepSecs=0);
+    /**
+     * @brief Sleep for a relative amount of time (seconds).
+     * 
+     * Deep sleep is broken into cycles of up to ~3.5 hours.
+     * 
+     * @param sleepTimeSec Time to sleep in seconds.
+     */
+    void performLongDeepSleep(uint64_t sleepTimeSec);
 
-  /* sleep long in seconds
-    The time will not exactly be met. ESP can only sleep for 3-4 hours. Even for such a short period it might wake up ~20 minutes earlier.
-    As there is no absolute time in deep sleep mode available, we need to believe in the time being elapsed correctly.
-    In case you need a more exact wake up, use PerformLongDeepSleepUntil instead
-  */
-  void performLongDeepSleep(uint64_t sleepTimeSec);
+    /**
+     * @brief Sleep until an absolute epoch time.
+     * 
+     * Requires a wifi connection and an updated NTPClient with valid time.
+     * 
+     * @param epocheTime Target epoch time (in seconds).
+     */
+    void performLongDeepSleepUntil(uint64_t epocheTime);
 
-  /* sleep until time
-  epocheTime is number of seconds that have elapsed since January 1, 1970 (midnight GMT); this might be shifted depending on how the ntpClient is setup. 
-  Attention: This will return in case there is no ntpClient specified or the ntpClient is not returning a valid current time (no update was done to it with netowrk conenction after last reset.)
-  */
-  void performLongDeepSleepUntil(uint64_t epocheTime); 
+    /**
+     * @brief Restores WiFi after wake-up from deep sleep.
+     * 
+     * Optimizes for minimal connection time. Falls back to deep sleep if reconnect fails.
+     * 
+     * @param failureSleepSecs If >0, sleep this long again when wifi connection or time server (only if specified) update fails. Users might need to call this as it's only automatically called when woken up the last time after the system went into deep sleep via function performLongDeepSleepUntil. 
+     */
+    void restoreWifi(uint16_t failureSleepSecs = 0);
 
-  /*
-    Wakes Wifi after Deepsleep. Tihs is required because we optimized Wifi usage for shortest wake-up and reduce power consumption.
-    If it's not possible to get Wifi connection it goes into deepsleep in case failureSleepSecs is >0. 
-  */
-  void restoreWifi(uint16_t failureSleepSecs=0);
-  /*
-    writes Wifi informaiton to internal structure to be saved when going into next deep sleep and
-    switches Wifi off in order to reduce power consumption for further program execution without Wifi.
-    */
+    /**
+     * @brief Releases WiFi to conserve power.
+     * 
+     * Saves connection state to RTC for fast reconnect. Might be used by users in their part, when a larger part might be executed without WiFi and energie consumption is really critical. Otherwise this is called automatically within the performLongDeepSleep-functions.
+     */
+    void releaseWifi();
 
-  /* This might be used to release Wifi earlier and perform other tasks, that do not need Wifi.
-	It's recommended to use the NTP time client also before this in order to calculate
-  */
+    /**
+     * @brief Customizes connection wait cycles.
+     * 
+     * One cycle is 10 ms. Default is 20/2000 = 200ms/20s.
+	 * It's not recommended to change these values, but funciton is provided for completeness.
+     * 
+     * @param quickConnectCycles Max cycles to reconnect via saved BSSID/channel.
+     * @param wifiWaitCycles Max cycles to establish normal WiFi.
+     */
+    inline void changeWaitCycles(uint16_t quickConnectCycles, uint16_t wifiWaitCycles)
+    {
+        maxQuickConnectCycles = quickConnectCycles;
+        maxWifiWaitCycles = wifiWaitCycles;
+    }
 
-  void releaseWifi();
-  /*
-    Change the default wait cycles for Wifi reconnection purposes.
-    1 cycles is 10ms. 
-    Dtandard values are 20 and 2000. I do not recommend to change these.
-  */
-  inline void changeWaitCycles(uint16_t quickConnectCycles, uint16_t wifiWaitCycles)
-  {
-    maxQuickConnectCycles=quickConnectCycles; 
-    maxWifiWaitCycles=wifiWaitCycles;
-  }
+private:
+    void saveRTCAndCallLongDeepSleep(uint64_t sleepTimeSec);
+    bool readFromRTCmemory();
+    void writeRTCmemory();
+    void saveWifiInformation();
+    void resetWifi();
 
-  private:
-  void saveRTCAndCallLongDeepSleep(uint64_t sleepTimeSec);
-  bool readFromRTCmemory();
-  void writeRTCmemory();
-  void saveWifiInformation();
-  void resetWifi();
-  
-  uint32_t calculateCRC32(const uint8_t *data,size_t length);
-  bool RTCmemoryValid=false;
+    uint32_t calculateCRC32(const uint8_t *data, size_t length);
 
-  int sleepTimeUntilWifiReconnectSec=60*60; // One hour
-  uint16_t maxQuickConnectCycles=20; // 1 cycle = 10ms. Wait max 200 ms to reconnect with old BSSi and channel
-  uint16_t maxWifiWaitCycles=2000; // 1 cycle = 10ms. Wait max. 20 secs to reach Wifi
+    bool RTCmemoryValid = false;
+    int sleepTimeUntilWifiReconnectSec = 60 * 60;
 
-  const char* wifiSsid;
-  const char* wifiPassword;
- 
-  NTPClient *timeClient;
+    uint16_t maxQuickConnectCycles = 20;
+    uint16_t maxWifiWaitCycles = 2000;
 
-  // Struct to save data in RTC memory which is kept alive during deep sleep
-  // Needs to be a mutliply by 4 as RTC memory is organized in 4-bytes chunks.
-  struct {
-      //checksum
-    uint32_t crc32;   // 4 bytes
-    
-    // sleeptime information
-    uint64_t remainingSleepTimeUs;  // 8bytes
-    uint32_t sleepUntilEpocheTime=0;  // 4 bytes
+    const char* wifiSsid;
+    const char* wifiPassword;
+    NTPClient* timeClient;
 
-    // Wifi reestablishing optimization (in sum 8)
-    // Wifi reestablishing optimization 
-    WiFiState wifiState;
-  } rtcData;
+    /**
+     * @brief RTC memory structure to persist state across deep sleep.
+     */
+    struct {
+        uint32_t crc32;                        ///< CRC checksum.
+        uint64_t remainingSleepTimeUs;         ///< Remaining sleep time in microseconds.
+        uint32_t sleepUntilEpocheTime = 0;     ///< Absolute wake time (epoch).
+        WiFiState wifiState;                   ///< State needed to quickly reconnect to WiFi.
+    } rtcData;
 };
 
 #endif
