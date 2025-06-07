@@ -12,24 +12,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install Doxygen
-        run: sudo apt-get install doxygen -y
+    # Build the HTML documentation
+    - name: Doxygen Action
+      uses: mattnotmitt/doxygen-action@v1.1.0
+      with:
+          doxyfile-path: ./Doxyfile
+          working-directory: .
 
-      - name: Generate Documentation
-        run: doxygen Doxyfile
-
-      - name: Deploy to docs/ folder
-        run: |
-          mkdir -p tmp-docs
-          mv docs/html/* tmp-docs/
-          rm -rf docs
-          mkdir docs
-          mv tmp-docs/* docs/
-
-      - name: Commit and push documentation
-        run: |
-          git config --local user.email "actions@github.com"
-          git config --local user.name "GitHub Actions"
-          git add docs
-          git commit -m "Update documentation" || echo "No changes to commit"
-          git push
+    # Deploy the HTML documentation to GitHub Pages
+    - name: GH Pages Deployment
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./doc/html/
+        enable_jekyll: false
+        allow_empty_commit: false
+        force_orphan: true
+        publish_branch: gh-pages
+          
