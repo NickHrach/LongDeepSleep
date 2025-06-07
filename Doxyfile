@@ -1,0 +1,9 @@
+PROJECT_NAME           = "LongDeepSleep"
+OUTPUT_DIRECTORY       = docs
+RECURSIVE              = YES
+EXTRACT_ALL            = YES
+GENERATE_LATEX         = NO
+INPUT                  = src include
+FILE_PATTERNS          = *.h *.cpp
+GENERATE_HTML          = YES
+GENERATE_TREEVIEW      = YES
