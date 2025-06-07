@@ -24,13 +24,14 @@
 
     if (!RTCmemoryValid) 
     {
-      // oops, RTC memory compromised, let's restart as if we did not get regualarly out of deep sleep.
+      // Oops, RTC memory compromised, let's restart as if we did not get regualarly out of deep sleep.
+	  // Actually, I never saw this in my tests!
       D_println(F("RTC memory content failed CRC check!"));
       return RTC_MEMORY_CHECK_FAILED;
     }
   
     if (rtcData.remainingSleepTimeUs==0) 
-		// We could check for tolerance value also, but then Wifi would not work. We need another deepsleep with WAKE_RF_DEFAULT
+		// We could check for tolerance value also, but then Wifi would not work. We need another deepsleep with WAKE_RF_DEFAULT, hence need to proceed in all cases
     {
 		// check for absolute time target
         if (rtcData.sleepUntilEpocheTime == 0)
@@ -59,7 +60,7 @@
         {
 			// Yes, we are there!
           D_println(F("Absolute time elapsed."));
-          return DEEP_SLEEP_DONE;
+          return DEEP_SLEEP_UNTIL_DONE;
         }
 		char buffer[30];
 		D_print(F("Target time:"));D_println(timeClient->time2string(rtcData.sleepUntilEpocheTime,buffer,false));
@@ -77,7 +78,7 @@
 
   void LongDeepSleep::saveRTCAndCallLongDeepSleep(uint64_t sleepTimeUs)
   {
-    uint64_t maxValue=ESP.deepSleepMax()-10e6; // make this 5e6 for 5 secs test purposes // reduce by 10 sec to be on the save side.
+    uint64_t maxValue=ESP.deepSleepMax()-10e6; // make this 5e6 for 5 secs test&debug purposes // reduce by 10 sec to be on the save side.
   
     if (sleepTimeUs>maxValue)
     {
@@ -90,25 +91,24 @@
     }
     releaseWifi();
     writeRTCmemory();
-    //if (rtcData.remainingSleepTimeUs>0)
     D_print(F("Going into DEEP SLEEP FOR USECS:"));
     D_println(sleepTimeUs);
     D_print(F("Total uptime (ms):"));
     D_println(millis());
     D_println(F("#####################"));
     /*
-	// Used this to see how much runtime differs, when debug messages are not printed to serial.
-	// It's about 10ms 
+	// Used the this block to see how much runtime differs, when debug messages are not printed to serial.
+	// It's about 10ms only.
 	// My measurements for LongDeepSleepExample (with debug on)
 	// ~60ms when directly extending long deep sleep
 	// ~1250ms when checking time from timeserver and then returning into deepsleep in case Wifi can be directly restored
-	// ~4500ms when checking time from timeserver and then returning into deepsleep in case Wifi cannot be directly restored
+	// ~4500ms when checking time from timeserver and then returning into deepsleep in case Wifi cannot be directly restored and needs to perform a scan
     Serial.begin(74880);
     Serial.print(F("\nTotal uptime (ms):"));
     Serial.println(millis());
     Serial.println(F("#####################"));
     */
-	// This is for debug purposes only:
+	// next line is for test&debug purposes only:
 	//sleepTimeUs=5000000;
     if (rtcData.remainingSleepTimeUs)
       ESP.deepSleep(sleepTimeUs, WAKE_RF_DISABLED);
@@ -132,6 +132,9 @@
 	// Also consider shifts by user defined timezones
     if (now < (48*3600)) return;
     
+	// return iin case we already passed the specified time.
+	if (epocheTime<now) return;
+	
     // write target time to struct so we can check against it later when woken up
     rtcData.sleepUntilEpocheTime=epocheTime;
       
@@ -204,6 +207,11 @@
           // no need to recalculate anything or rewrite RTC memory, hence calling directly ESP.deepSleep.
           ESP.deepSleep(1000000ULL*failureSleepSecs, WAKE_RF_DEFAULT );
         }
+		else
+		{
+			D_println("Giving up without Wifi connection");
+			return;
+		}
       } 
       delay(10); // one cylce is 10ms.
       wifiStatus = WiFi.status();
