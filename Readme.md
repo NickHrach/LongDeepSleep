@@ -107,6 +107,7 @@ void loop() {
 ```
 
 ### 🧪 See examples/LongDeepSleepExample.ino in the repository for the full working sketch including debug notes and timing measurements.
+Or for detailed explanation look at the automatically generated Doxygen dokumentation: https://nickhrach.github.io/LongDeepSleep/classLongDeepSleep.html
 
 ## 🔗 Related Links & Resources
 - https://www.bakke.online/index.php/2017/06/24/esp8266-wifi-power-reduction-avoiding-network-scan/
@@ -117,4 +118,4 @@ void loop() {
     A great overview of power consumption by different versions of Wemos D1 mini modules in deep sleep. 
 - https://randomnerdtutorials.com/esp8266-nodemcu-date-time-ntp-client-server-arduino/
 	
-    Overview over NTP client usage. Most gateway devices like Fritzbox are also able to be used as local time server.
+    Overview over NTP client usage. Most gateway devices like Fritzbox are also able to be used as local time server. 
