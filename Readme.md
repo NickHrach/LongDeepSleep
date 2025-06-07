@@ -4,7 +4,7 @@ Smart Deep Sleep Library for ESP8266 – with potential ESP32 compatibility (not
 ## Motivation
 
 This library was created to support battery-powered ESP8266 based arduino projects needing powerful timer depending deep-sleep solutions.
-In my case it was an e-paper display project that needs to wake up once per day, retrieve updated content from a file, display it, and then go back to deep sleep. The project focuses on **time-based wakeups** rather than IO-triggered ones.
+In my case it was an e-paper display project that needs to wake up once per day, retrieve updated content from a server via wifi, update the display content accordingly, and then go back to deep sleep. The project focuses on **time-based wakeups** rather than IO-triggered ones.
 
 During development, I encountered several challenges related to deep sleep on ESP8266 and ESP32 boards:
 
