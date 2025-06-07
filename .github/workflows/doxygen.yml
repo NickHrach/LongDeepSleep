@@ -18,6 +18,12 @@ jobs:
           doxyfile-path: ./Doxyfile
           working-directory: .
 
+      - name: Debug git state
+        run: |
+          git config --global user.name
+          git config --global user.email
+          git remote -v
+          
       - name: GH Pages Deployment
         uses: peaceiris/actions-gh-pages@v3
         with:
