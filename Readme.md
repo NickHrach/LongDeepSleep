@@ -109,5 +109,6 @@ void loop() {
 ### 🧪 See examples/LongDeepSleepExample.ino in the repository for the full working sketch including debug notes and timing measurements.
 
 ## 🔗 Related Links & Resources
--[A series of articles about avoiding Wifi Scans. This solution did not work for me reliably when performing multiple deep sleeps without restoring Wifi, hence I decided to use WiFi.shutdown and WiFi.resumeFromShutdown instead. But I used the described solution for storing information in RTC memory.] (https://www.bakke.online/index.php/2017/06/24/esp8266-wifi-power-reduction-avoiding-network-scan/)
--[A great overview of power consumption by different versions of Wemos D1 mini modules in deep sleep.] (https://salvatorelab.com/2023/01/wemos-d1-mini-deep-sleep-current-draw/)
+- [A series of articles about avoiding Wifi Scans. This solution did not work for me reliably when performing multiple deep sleeps without restoring Wifi, hence I decided to use WiFi.shutdown and WiFi.resumeFromShutdown instead. But I used the described solution for storing information in RTC memory.] (https://www.bakke.online/index.php/2017/06/24/esp8266-wifi-power-reduction-avoiding-network-scan/)
+- [A great overview of power consumption by different versions of Wemos D1 mini modules in deep sleep.] (https://salvatorelab.com/2023/01/wemos-d1-mini-deep-sleep-current-draw/)
+- [Ovreview over NTP client usage. Most gateway devices like Fritzbox are also able to be used as local time server.](https://randomnerdtutorials.com/esp8266-nodemcu-date-time-ntp-client-server-arduino/)
