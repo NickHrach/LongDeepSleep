@@ -1,6 +1,7 @@
 #include "LongDeepSleep.h"
 #define _DEBUG_ 1 
 #include "SwitchableSerial.h"
+constexpr uint64_t MICROSECONDS_PER_SECOND = 1000000ULL;
 
   LongDeepSleep::LongDeepSleep(const char* ssid, const char* password, NTPClient* ntpClient)
     :wifiSsid(ssid),wifiPassword(password),timeClient(ntpClient)
@@ -24,7 +25,7 @@
 
     if (!RTCmemoryValid) 
     {
-      // Oops, RTC memory compromised, let's restart as if we did not get regualarly out of deep sleep.
+      // Oops, RTC memory compromised, let's restart as if we did not get regularly out of deep sleep.
 	  // Actually, I never saw this in my tests!
       D_println(F("RTC memory content failed CRC check!"));
       return RTC_MEMORY_CHECK_FAILED;
@@ -47,7 +48,7 @@
         // here, we obviously did not go into deepsleep again, hence we need to check the time server
         unsigned long now = timeClient->getEpochTime();
 		// timezone corrections might lead to a value > 0, hence allow a 2 days offset.
-        if (now < (48*3600)) return ABSOLUTE_TIME_CHECK_FAILED;
+        if (now < (48u*3600u)) return ABSOLUTE_TIME_CHECK_FAILED;
         // calculate diff time is our sleep time in secs
         int64_t sleepTimeSec = rtcData.sleepUntilEpocheTime;
 		
@@ -66,11 +67,11 @@
 		D_print(F("Target time:"));D_println(timeClient->time2string(rtcData.sleepUntilEpocheTime,buffer,false));
 		D_print(F("Still remaining time in secs:"));D_println(sleepTimeSec);
         // otherwise perform LongDeepSleep again for rest of time
-        saveRTCAndCallLongDeepSleep(1000000ULL*sleepTimeSec);
+        saveRTCAndCallLongDeepSleep(sleepTimeSec * MICROSECONDS_PER_SECOND);
         // Never reach this point
 		return -1;
     }
-    D_print(F("Long deep sleep not finally done. Remaining sleep time is:"));D_print((uint32_t)(rtcData.remainingSleepTimeUs/1e6));D_println(F(" secs."));
+    D_print(F("Long deep sleep not finally done. Remaining sleep time is:"));D_print(rtcData.remainingSleepTimeUs/MICROSECONDS_PER_SECOND);D_println(F(" secs."));
     saveRTCAndCallLongDeepSleep(rtcData.remainingSleepTimeUs);
     return -1; // this will never happen as the last function call will end in deep sleep.
   }
@@ -78,7 +79,7 @@
 
   void LongDeepSleep::saveRTCAndCallLongDeepSleep(uint64_t sleepTimeUs)
   {
-    uint64_t maxValue=ESP.deepSleepMax()-10e6; // make this 5e6 for 5 secs test&debug purposes // reduce by 10 sec to be on the save side.
+    uint64_t maxValue=ESP.deepSleepMax()-10000000ULL; // make this 5e6 for 5 secs test&debug purposes // reduce by 10 sec to be on the save side.
   
     if (sleepTimeUs>maxValue)
     {
@@ -111,9 +112,9 @@
 	// next line is for test&debug purposes only:
 	//sleepTimeUs=5000000;
     if (rtcData.remainingSleepTimeUs)
-      ESP.deepSleep(sleepTimeUs, WAKE_RF_DISABLED);
+      ESP.deepSleep(sleepTimeUs, RF_DISABLED);
     else
-      ESP.deepSleep(sleepTimeUs, WAKE_RF_DEFAULT);
+      ESP.deepSleep(sleepTimeUs, RF_DEFAULT);
   // does not return
   }
 
@@ -121,7 +122,7 @@
   {
 	D_print(F("arranging long deep sleep for secs:"));D_println(sleepTimeSec);
     rtcData.sleepUntilEpocheTime=0;
-    saveRTCAndCallLongDeepSleep(sleepTimeSec*1e6); // This takes usec as parameter
+    saveRTCAndCallLongDeepSleep(sleepTimeSec*MICROSECONDS_PER_SECOND); // This takes usec as parameter
   }
 
   void LongDeepSleep::performLongDeepSleepUntil(uint64_t epocheTime)
@@ -130,7 +131,7 @@
     unsigned long now = timeClient->getEpochTime();
     // let's assume there is time gone since ntpTime was initialized, but never got an absolute update
 	// Also consider shifts by user defined timezones
-    if (now < (48*3600)) return;
+    if (now < (48u*3600u)) return;
     
 	// return iin case we already passed the specified time.
 	if (epocheTime<now) return;
@@ -144,7 +145,7 @@
 	D_print(F("perform long Sleep until:"));D_println(timeClient->time2string(epocheTime,buffer,false));
 
     // call performLongDeepSleep
-    saveRTCAndCallLongDeepSleep(sleepTimeSec*1e6);
+    saveRTCAndCallLongDeepSleep(sleepTimeSec*MICROSECONDS_PER_SECOND);
   }
 
   void LongDeepSleep::restoreWifi(uint16_t failureSleepSecs)
@@ -205,7 +206,7 @@
           D_printf("Try again in %u seconds.", failureSleepSecs);
           
           // no need to recalculate anything or rewrite RTC memory, hence calling directly ESP.deepSleep.
-          ESP.deepSleep(1000000ULL*failureSleepSecs, WAKE_RF_DEFAULT );
+          ESP.deepSleep(failureSleepSecs*MICROSECONDS_PER_SECOND, RF_DEFAULT );
         }
 		else
 		{
@@ -233,7 +234,7 @@
           D_printf("Try again in %u seconds.", failureSleepSecs);
           
           // no need to recalculate anything or rewrite RTC memory, hence calling directly ESP.deepSleep.
-          ESP.deepSleep(1000000ULL*failureSleepSecs, WAKE_RF_DEFAULT );
+          ESP.deepSleep(failureSleepSecs*MICROSECONDS_PER_SECOND, RF_DEFAULT );
 		}
       }
     #ifdef _DEBUG_
