@@ -21,12 +21,24 @@ public:
         va_end(args);
     }
 	
-
+/*
 	void println(int64_t val)          { std::cout << "\t" << val << "\n"; }
     void println(uint64_t val)         { std::cout << "\t" << val << "\n"; }
 	void print(int64_t val)            { std::cout << "\t" << val; }
     void print(uint64_t val)           { std::cout << "\t" << val; }
-	
+*/
+
+void println(unsigned int val)     { std::cout << "\t" << val << "\n"; }
+void println(long val)             { std::cout << "\t" << val << "\n"; }
+void print(unsigned int val)     { std::cout << "\t" << val ; }
+void print(long val)             { std::cout << "\t" << val ; }
+
+// Für „größere“ 64-Bit-Zahlen:
+void println(long long val)            { std::cout << "\t" << val << "\n"; }
+void println(unsigned long long val)   { std::cout << "\t" << val << "\n"; }
+void print(long long val)            { std::cout << "\t" << val; }
+void print(unsigned long long val)   { std::cout << "\t" << val; }
+
 	uint32_t baudRate(){return _baudrate;}
 	
 	void _setTestBaudrate(uint32_t br){_baudrate=br;}
