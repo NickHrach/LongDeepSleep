@@ -105,6 +105,6 @@ int testStandardCases() {
 
 int main() {
 	int error=0;
-    error |= testCase();
+    error |= testStandardCases();
     return error;
 }
