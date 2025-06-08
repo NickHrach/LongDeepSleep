@@ -1,8 +1,7 @@
 # .github/workflows/run-tests.yml
 
-name: C++ Unit Tests (CMake)
+name: longdeepsleep tests (CMake)
 
-# Trigger: Bei jedem Push und bei jedem Pull Request auf main
 on:
   push:
     branches: [ main ]
@@ -14,25 +13,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1) Checke das gesamte Repository aus
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2) Instelliere CMake und g++
       - name: Install build tools
         run: sudo apt-get update && sudo apt-get install -y cmake build-essential
 
-      # 3) Wechsle in test/, configure mit CMake
       - name: Configure with CMake
         working-directory: test
-        run: cmake -G "Unix Makefiles" ..
+        run: cmake .
 
-      # 4) Baue das Test-Executable
       - name: Build tests
         working-directory: test
         run: cmake --build .
 
-      # 5) Führe das Test-Executable aus
       - name: Run tests
         working-directory: test
         run: ./run_tests
