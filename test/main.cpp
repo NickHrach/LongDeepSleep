@@ -9,7 +9,7 @@ const char *password="NOT EMPLTY";
 			delete lds; \
 			LongDeepSleep *lds= new LongDeepSleep(ssid, password, &ntp);} while(0)
 
-int testCase() {
+int testStandardCases() {
 	int error=0;
 
     std::cout << "Starting Tests\n";
@@ -39,7 +39,6 @@ int testCase() {
 	  std::cout << "[Test 1.2] Error : Did not return correctly after deep sleep check\n";
 	  error=-1;
 	}
-	
 	
 	unsigned long now = ntp.getEpochTime();
 	unsigned long target = now + 8*3600; // 7 hours later
@@ -100,6 +99,10 @@ int testCase() {
 	
 	return error;
 }
+
+// TBD: test 
+	// with wifi problems
+	// with timeserver not responding
 
 int main() {
 	int error=0;
