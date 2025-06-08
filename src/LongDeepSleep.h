@@ -1,11 +1,14 @@
 #ifndef _LONGDEEPSLEEP_H_
 #define _LONGDEEPSLEEP_H_
 
+#ifdef _MOCK_TEST_
+#include "MockTestSetup.h"
+#else
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 #include <NTPClient.h>
 #include <include/WiFiState.h>
-
+#endif
 /**
  * @brief A class for managing long deep sleep cycles with RTC memory and optimized WiFi reconnection on ESP8266.
  *
@@ -30,8 +33,8 @@ public:
     /**
      * @brief Constructor.
      * 
-     * @param ssid WiFi SSID. (optional in case no absolute time for deep sleep is rquired.)
-     * @param password WiFi password. (optional in case no absolute time for deep sleep is rquired.)
+     * @param ssid WiFi SSID. (optional in case no absolute time for deep sleep is required.)
+     * @param password WiFi password. (optional in case no absolute time for deep sleep is required.)
      * @param ntpClient pointer to a configured NTPClient instance. (optional in case no absolute time for deep sleep is rquired.)
      */
     LongDeepSleep(const char* ssid = nullptr, const char* password = nullptr, NTPClient* ntpClient = nullptr);
@@ -77,7 +80,7 @@ public:
     /**
      * @brief Releases WiFi to conserve power.
      * 
-     * Saves connection state to RTC for fast reconnect. Might be used by users in their part, when a larger part might be executed without WiFi and energie consumption is really critical. Otherwise this is called automatically within the performLongDeepSleep-functions.
+     * Saves connection state to RTC for fast reconnect. Might be used by users in their part, when a larger part might be executed without WiFi and energy consumption is really critical. Otherwise this is called automatically within the performLongDeepSleep-functions.
      */
     void releaseWifi();
 
