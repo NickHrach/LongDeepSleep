@@ -1,0 +1,3 @@
+C:/Users/Kay-Ulrich/Documents/Arduino/libraries/LongDeepSleep/test/build/CMakeFiles/run_tests.dir
+C:/Users/Kay-Ulrich/Documents/Arduino/libraries/LongDeepSleep/test/build/CMakeFiles/edit_cache.dir
+C:/Users/Kay-Ulrich/Documents/Arduino/libraries/LongDeepSleep/test/build/CMakeFiles/rebuild_cache.dir
