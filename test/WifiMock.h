@@ -39,11 +39,11 @@ public:
 
     void begin(const char* ssid, const char* password) {
         Serial.printf("[MOCK] WiFi.begin(%s, %s)\n", ssid, password);
-        currentStatus = WL_CONNECTED; // Simuliere Erfolg
+        
     }
 
     wl_status_t status() {
-        Serial.println("[MOCK] WiFi.status()");
+        //Serial.println("[MOCK] WiFi.status()");
         return currentStatus;
     }
 
@@ -73,7 +73,7 @@ public:
         currentMode = mode;
     }
 
-    // Optional für Tests
+    // Optional for tests
     void setStatus(wl_status_t status) {
         currentStatus = status;
     }
