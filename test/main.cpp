@@ -1,13 +1,13 @@
 #include "LongDeepSleep.h"
 #include "MockGlobalInstances.h"
-
+LongDeepSleep *lds=NULL;
 NTPClient ntp;
-const char *ssid="NOT IMPORTANT";
-const char *password="NOT EMPLTY";
+const char *ssid="Simulatet Wifi SSID";
+const char *password="Simulated Wifi password";
 
 #define SIMULATE_ESP_RESTART do {ESP.moc_restart(5);\
 			delete lds; \
-			LongDeepSleep *lds= new LongDeepSleep(ssid, password, &ntp);} while(0)
+			lds= new LongDeepSleep(ssid, password, &ntp);} while(0)
 
 int testStandardCases() {
 	int error=0;
@@ -16,7 +16,7 @@ int testStandardCases() {
 
     ntp.setMockTime(1749379060); // Sun Jun 08 2025 10:37:40 GMT+0000
 
-    LongDeepSleep *lds= new LongDeepSleep(ssid, password, &ntp);
+    lds= new LongDeepSleep(ssid, password, &ntp);
 
     if (lds->checkWakeUp()==LongDeepSleep::OTHER_WAKE_UP_REASON) {
          std::cout <<"[Test 1.1] Correct: Woken up from reset or restart.\n";
@@ -25,13 +25,9 @@ int testStandardCases() {
 		error=-1;
     }
 
-//TBD:
-	//ESP.prepareforMockdeepsleep(...);
-    lds->performLongDeepSleep(5000); // sleep for 5 seconds
-	
-	// After every long deep sleep we need to recreate the clas, as it gows through a simulated restart:
+    lds->performLongDeepSleep(5000); // sleep for 5 seconds	
+	// After every long deep sleep we need to recreate the class, as it goes through a simulated restart:
 	SIMULATE_ESP_RESTART;
-		
 	if (lds->checkWakeUp()==LongDeepSleep::DEEP_SLEEP_DONE) {
       std::cout << "[Test 1.2] Correct: woke up from deep sleep\n";
 	}
@@ -93,6 +89,22 @@ int testStandardCases() {
 	}
 	else {
 	  std::cout << "[Test 1.3.6] Error: Did not return correctly after deep sleep check\n";
+	  error=-1;
+	}
+	
+	// Now: What happens when Wifi cannot connect after absolue sleep?
+	SIMULATE_ESP_RESTART;
+	now = ntp.getEpochTime();
+	target = now + 1*3600; // 1 hour later can be done within one cycle.
+	lds->performLongDeepSleepUntil(target);
+	WiFi.setStatus(WL_CONNECT_FAILED);
+	ntp.setMockTime(40); // No Wifi --> no absolutetime.
+	int ret=lds->checkWakeUp();
+	if (ret==LongDeepSleep::ABSOLUTE_TIME_CHECK_FAILED) {
+      std::cout << "[Test 1.4.1] Correct: deep sleep returned ABSOLUTE_TIME_CHECK_FAILED\n";
+	}
+	else {
+	  std::cout << "[Test 1.4.1] Error: Did not return correctly after deep sleep check: " << ret << "\n";
 	  error=-1;
 	}
 	
