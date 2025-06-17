@@ -52,8 +52,8 @@ constexpr uint64_t MICROSECONDS_PER_SECOND = 1000000ULL;
         // calculate diff time is our sleep time in secs
         int64_t sleepTimeSec = rtcData.sleepUntilEpocheTime;
 		
-		//D_print("Epoche Target:");D_println(sleepTimeSec);
-		//D_print("Epoche now:");D_println(now);
+		D_print("Epoche Target:");D_println(sleepTimeSec);
+		D_print("Epoche now:");D_println(now);
 		sleepTimeSec = sleepTimeSec-now;
 		//D_print("Epoche diff:");D_println(sleepTimeSec);
 		
@@ -79,6 +79,7 @@ constexpr uint64_t MICROSECONDS_PER_SECOND = 1000000ULL;
 
   void LongDeepSleep::saveRTCAndCallLongDeepSleep(uint64_t sleepTimeUs)
   {
+	D_println(F("saveRTCAndCallLongDS"));
     uint64_t maxValue=ESP.deepSleepMax()-10000000ULL; // make this 5e6 for 5 secs test&debug purposes // reduce by 10 sec to be on the save side.
   
     if (sleepTimeUs>maxValue)
@@ -125,16 +126,17 @@ constexpr uint64_t MICROSECONDS_PER_SECOND = 1000000ULL;
     saveRTCAndCallLongDeepSleep(sleepTimeSec*MICROSECONDS_PER_SECOND); // This takes usec as parameter
   }
 
-  void LongDeepSleep::performLongDeepSleepUntil(uint64_t epocheTime)
+  int LongDeepSleep::performLongDeepSleepUntil(uint64_t epocheTime)
   {
-    if (timeClient==NULL) return;
+    if (timeClient==NULL) return NO_TIME_CLIENT;
     unsigned long now = timeClient->getEpochTime();
+	D_print(F("NOW:"));D_println(now);
     // let's assume there is time gone since ntpTime was initialized, but never got an absolute update
 	// Also consider shifts by user defined timezones
-    if (now < (48u*3600u)) return;
+    if (now < (48u*3600u)) return NO_ABSOLUE_TIME_AVAILABLE;
     
 	// return iin case we already passed the specified time.
-	if (epocheTime<now) return;
+	if (epocheTime<now) return SPECIFIED_TIME_IN_PAST;
 	
     // write target time to struct so we can check against it later when woken up
     rtcData.sleepUntilEpocheTime=epocheTime;
@@ -146,6 +148,7 @@ constexpr uint64_t MICROSECONDS_PER_SECOND = 1000000ULL;
 
     // call performLongDeepSleep
     saveRTCAndCallLongDeepSleep(sleepTimeSec*MICROSECONDS_PER_SECOND);
+	return OK;
   }
 
   void LongDeepSleep::restoreWifi(uint16_t failureSleepSecs)

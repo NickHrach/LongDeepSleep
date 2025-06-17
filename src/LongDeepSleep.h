@@ -29,6 +29,16 @@ public:
         RTC_MEMORY_CHECK_FAILED = -2,     ///< RTC memory is invalid or corrupted.
         ABSOLUTE_TIME_CHECK_FAILED = -3   ///< Wake-up for absolute time failed due to time server/WiFi issues.
     };
+	
+	/**
+     * @brief Return codes for performLongDeepSleepUntil(int).
+     */
+	enum {
+		OK = 0, 						///< Will never be seen as then the ESP will go into deep sleep
+		NO_TIME_CLIENT = -1, 			///< No time client specified when creating class longdeepsleep, hence this function is not available.
+		NO_ABSOLUE_TIME_AVAILABLE = -2, ///<  time client was specified, but it was not possible to determine an absolute time, hence this function is not available.
+		SPECIFIED_TIME_IN_PAST = 1 		///< The specified until time stamp lies in the past, hence sleep not required, do whatever you want to do then.
+	};
 
     /**
      * @brief Constructor.
@@ -66,7 +76,7 @@ public:
      * 
      * @param epocheTime Target epoch time (in seconds).
      */
-    void performLongDeepSleepUntil(uint64_t epocheTime);
+    int performLongDeepSleepUntil(uint64_t epocheTime);
 
     /**
      * @brief Restores WiFi after wake-up from deep sleep.
