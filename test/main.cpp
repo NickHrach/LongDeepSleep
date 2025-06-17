@@ -1,5 +1,7 @@
 #include "LongDeepSleep.h"
 #include "MockGlobalInstances.h"
+#include <gtest/gtest.h>
+
 LongDeepSleep *lds=NULL;
 NTPClient ntp;
 const char *ssid="Simulatet Wifi SSID";
@@ -9,114 +11,58 @@ const char *password="Simulated Wifi password";
 			delete lds; \
 			lds= new LongDeepSleep(ssid, password, &ntp);} while(0)
 
-int testStandardCases() {
-	int error=0;
 
-    std::cout << "Starting Tests\n";
-
-    ntp.setMockTime(1749379060); // Sun Jun 08 2025 10:37:40 GMT+0000
-
-    lds= new LongDeepSleep(ssid, password, &ntp);
-
-    if (lds->checkWakeUp()==LongDeepSleep::OTHER_WAKE_UP_REASON) {
-         std::cout <<"[Test 1.1] Correct: Woken up from reset or restart.\n";
-    } else {
-         std::cout <<"[Test 1.1] Error: not correctly started without deep sleep.\n";
-		error=-1;
-    }
-
-    lds->performLongDeepSleep(5000); // sleep for 5 seconds	
-	// After every long deep sleep we need to recreate the class, as it goes through a simulated restart:
+TEST(LongDeepSleepTest, LongRelativeSleep) {
+	lds= new LongDeepSleep(ssid, password, &ntp);
+	int wakeup_reason=lds->checkWakeUp();
+	EXPECT_EQ(wakeup_reason, LongDeepSleep::OTHER_WAKE_UP_REASON) ;
+	lds->performLongDeepSleep(5000); // sleep for 5 seconds	
 	SIMULATE_ESP_RESTART;
-	if (lds->checkWakeUp()==LongDeepSleep::DEEP_SLEEP_DONE) {
-      std::cout << "[Test 1.2] Correct: woke up from deep sleep\n";
-	}
-	else {
-	  std::cout << "[Test 1.2] Error : Did not return correctly after deep sleep check\n";
-	  error=-1;
-	}
-	
+	wakeup_reason=lds->checkWakeUp();
+	EXPECT_EQ(wakeup_reason, LongDeepSleep::DEEP_SLEEP_DONE) ;
+}
+
+TEST(LongDeepSleepTest, LongAbsoluteSleep) {
+	ESP.moc_restart();
+	ntp.setMockTime(0); 
+	lds= new LongDeepSleep(ssid, password, &ntp);
+	EXPECT_EQ(lds->performLongDeepSleepUntil(1000), LongDeepSleep::NO_ABSOLUE_TIME_AVAILABLE) << "Checked for missing absolute time";
+
+	ntp.setMockTime(1749379060); // Sun Jun 08 2025 10:37:40 GMT+0000
 	unsigned long now = ntp.getEpochTime();
-	unsigned long target = now + 8*3600; // 7 hours later
-	lds->performLongDeepSleepUntil(target); // sleep for 5 seconds
-	// We check 6 times// 3 times 
+	unsigned long target = now + 8*3600; // 8 hours later
+	EXPECT_EQ(lds->performLongDeepSleepUntil(now-10), LongDeepSleep::SPECIFIED_TIME_IN_PAST) << "Checked for sleep until time in past";
+	
+	int return_value = lds->performLongDeepSleepUntil(target); 
+	EXPECT_EQ(return_value, LongDeepSleep::OK) << "Checked for sleep until in 8 hours\n";
+	// We check 3 times 
 	SIMULATE_ESP_RESTART;
-	if (lds->checkWakeUp()==-1) {
-      std::cout << "[Test 1.3.1] Correct: deep sleep extended\n";
-	}
-	else {
-	  std::cout << "[Test 1.3.1] Error : Did not return correctly after deep sleep check\n";
-	  error=-1;
-	}
+	EXPECT_EQ(lds->checkWakeUp(), -1);
 	SIMULATE_ESP_RESTART;
-	if (lds->checkWakeUp()==-1) {
-      std::cout << "[Test 1.3.2] Correct: deep sleep extended\n";
-	}
-	else {
-	  std::cout << "[Test 1.3.2] Error: Did not return correctly after deep sleep check\n";
-	  error=-1;
-	}
+	EXPECT_EQ(lds->checkWakeUp(), -1);
 	SIMULATE_ESP_RESTART;
-	if (lds->checkWakeUp()==-1) {
-      std::cout << "[Test 1.3.3] Correct: deep sleep extended\n";
-	}
-	else {
-	  std::cout << "[Test 1.3.3] Error: Did not return correctly after deep sleep check\n";
-	  error=-1;
-	}
+	EXPECT_EQ(lds->checkWakeUp(), -1);
 	// ok, now it should be extended after checking time. We need to set the absolute time to target + something
 	// then next 3 times should work and then return with message deepsleppUntil is done:
 	ntp.setMockTime(target + 65);
 	SIMULATE_ESP_RESTART;
-	if (lds->checkWakeUp()==-1) {
-      std::cout << "[Test 1.3.4] Correct: deep sleep extended\n";
-	}
-	else {
-	  std::cout << "[Test 1.3.4] Error: Did not return correctly after deep sleep check\n";
-	  error=-1;
-	}
+	EXPECT_EQ(lds->checkWakeUp(), -1);
 	SIMULATE_ESP_RESTART;
-	if (lds->checkWakeUp()==-1) {
-      std::cout << "[Test 1.3.5] Correct: deep sleep extended\n";
-	}
-	else {
-	  std::cout << "[Test 1.3.5] Error: Did not return correctly after deep sleep check\n";
-	  error=-1;
-	}
+	EXPECT_EQ(lds->checkWakeUp(), -1);
 	SIMULATE_ESP_RESTART;
-	if (lds->checkWakeUp()==LongDeepSleep::DEEP_SLEEP_UNTIL_DONE) {
-      std::cout << "[Test 1.3.6] Correct: deepSleepUntil done\n";
-	}
-	else {
-	  std::cout << "[Test 1.3.6] Error: Did not return correctly after deep sleep check\n";
-	  error=-1;
-	}
-	
+	EXPECT_EQ(lds->checkWakeUp(), LongDeepSleep::DEEP_SLEEP_UNTIL_DONE) ;
+}
+
+TEST(LongDeepSleepTest, NoWifi) {	
+    lds= new LongDeepSleep(ssid, password, &ntp);
 	// Now: What happens when Wifi cannot connect after absolue sleep?
-	SIMULATE_ESP_RESTART;
-	now = ntp.getEpochTime();
-	target = now + 1*3600; // 1 hour later can be done within one cycle.
+	unsigned long now = ntp.getEpochTime();
+	unsigned long target = now + 1*3600; // 1 hour later can be done within one cycle.
 	lds->performLongDeepSleepUntil(target);
+	SIMULATE_ESP_RESTART;
 	WiFi.setStatus(WL_CONNECT_FAILED);
 	ntp.setMockTime(40); // No Wifi --> no absolutetime.
-	int ret=lds->checkWakeUp();
-	if (ret==LongDeepSleep::ABSOLUTE_TIME_CHECK_FAILED) {
-      std::cout << "[Test 1.4.1] Correct: deep sleep returned ABSOLUTE_TIME_CHECK_FAILED\n";
-	}
-	else {
-	  std::cout << "[Test 1.4.1] Error: Did not return correctly after deep sleep check: " << ret << "\n";
-	  error=-1;
-	}
-	
-	return error;
+	int wakeup_reason=lds->checkWakeUp();
+	EXPECT_EQ(wakeup_reason, LongDeepSleep::ABSOLUTE_TIME_CHECK_FAILED) ;
 }
 
-// TBD: test 
-	// with wifi problems
-	// with timeserver not responding
-
-int main() {
-	int error=0;
-    error |= testStandardCases();
-    return error;
-}
