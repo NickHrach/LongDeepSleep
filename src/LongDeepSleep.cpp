@@ -1,12 +1,14 @@
 #include "LongDeepSleep.h"
 #define _DEBUG_ 1 
 #include "SwitchableSerial.h"
+#include "CloneDeepSleepWorkaround.h"
 constexpr uint64_t MICROSECONDS_PER_SECOND = 1000000ULL;
 
-  LongDeepSleep::LongDeepSleep(const char* ssid, const char* password, NTPClient* ntpClient)
-    :wifiSsid(ssid),wifiPassword(password),timeClient(ntpClient)
+  LongDeepSleep::LongDeepSleep(CloneWorkaround param_cloneWorkaround, const char* ssid, const char* password, NTPClient* ntpClient)
+    :wifiSsid(ssid),wifiPassword(password),timeClient(ntpClient), cloneWorkaround(param_cloneWorkaround)
   {
     RTCmemoryValid=readFromRTCmemory();
+	rtcData.rebootCounter++;
   }
   
   int LongDeepSleep::checkWakeUp(uint32_t toleranceSec, uint16_t failureSleepSecs)
@@ -16,13 +18,31 @@ constexpr uint64_t MICROSECONDS_PER_SECOND = 1000000ULL;
 	// See MAKRO definition for details in "SwitchableSerial.h"
 	D_init(74880);
     D_println(F("\n----------------------------------"));
+	D_print(F("resetCounter:")); D_println(rebootCounter());
     D_print(F("millis:")); D_println(millis());
-    struct rst_info *rstInfo = system_get_rst_info();
-    D_print(F("restart reason:"));
-    D_println(rstInfo->reason);
-    // Return false in case this is not wake up from deep sleep
-    if (rstInfo->reason!=5) return OTHER_WAKE_UP_REASON;
-
+	boolean isComingFromDeepSleep=false;
+	if (cloneWorkaround != NO_WORKAROUND)
+	{
+		D_println("Check for workaround reboot reason");
+		if (cloneWorkaround == WEMOS_D1_V3_CLONE)
+		{
+			isComingFromDeepSleep=isComingFromDeepsleep_WEMOS_D1_mini_v3();
+		}
+		// Add here other workarounds that require sepcial reset reason detection
+		if (isComingFromDeepSleep)
+		{
+			D_println(F("restart reason: Workaround DeepSleep wakeup detected."));
+		}
+	}
+	if (!isComingFromDeepSleep) // only true in case a workaround got this result.
+	{
+		struct rst_info *rstInfo = system_get_rst_info();
+		D_print(F("restart reason:"));
+		D_println(rstInfo->reason);
+		// Return false in case this is not wake up from deep sleep
+		if (rstInfo->reason!=5) return OTHER_WAKE_UP_REASON;
+	}
+	
     if (!RTCmemoryValid) 
     {
       // Oops, RTC memory compromised, let's restart as if we did not get regularly out of deep sleep.
@@ -111,11 +131,20 @@ constexpr uint64_t MICROSECONDS_PER_SECOND = 1000000ULL;
     Serial.println(F("#####################"));
     */
 	// next line is for test&debug purposes only:
+	D_flush();
 	//sleepTimeUs=5000000;
-    if (rtcData.remainingSleepTimeUs)
-      ESP.deepSleep(sleepTimeUs, RF_DISABLED);
-    else
-      ESP.deepSleep(sleepTimeUs, RF_DEFAULT);
+	
+	if (cloneWorkaround == WEMOS_D1_V3_CLONE)
+	{
+		WADeepsleep_WEMOS_D1_mini_v3(sleepTimeUs);
+	}
+	else // if no workaround then use standard implementation
+	{
+		if (rtcData.remainingSleepTimeUs)
+		  ESP.deepSleep(sleepTimeUs, RF_DISABLED);
+		else
+		  ESP.deepSleep(sleepTimeUs, RF_DEFAULT);
+	}
   // does not return
   }
 
@@ -269,6 +298,13 @@ constexpr uint64_t MICROSECONDS_PER_SECOND = 1000000ULL;
     delay(5);
   }
 
+  void LongDeepSleep::resetRTCdata()
+ {
+	rtcData.rebootCounter=0;
+	rtcData.remainingSleepTimeUs=0;
+	rtcData.sleepUntilEpocheTime = 0;
+ }
+	
   bool LongDeepSleep::readFromRTCmemory()
   {
     D_println(F("read Info from RTC memory"));
@@ -284,6 +320,7 @@ constexpr uint64_t MICROSECONDS_PER_SECOND = 1000000ULL;
       else
       {
         D_println(F("CRC check failed."));
+		resetRTCdata();
         return false;
       }
     }
