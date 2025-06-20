@@ -20,6 +20,7 @@ include_directories(
 # Testquelle und Produktionsquelle
 set(SRC_FILES
     ${CMAKE_SOURCE_DIR}/../src/LongDeepSleep.cpp
+    ${CMAKE_SOURCE_DIR}/MockCloneDeepSleepWorkaround.cpp
     main.cpp
 )
 

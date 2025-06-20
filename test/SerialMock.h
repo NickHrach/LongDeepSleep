@@ -38,7 +38,7 @@ void println(long long val)            { std::cout << val << "\n"; }
 void println(unsigned long long val)   { std::cout << val << "\n"; }
 void print(long long val)            { std::cout << val; }
 void print(unsigned long long val)   { std::cout << val; }
-
+void flush(){};
 	uint32_t baudRate(){return _baudrate;}
 	
 	void _setTestBaudrate(uint32_t br){_baudrate=br;}
