@@ -6,7 +6,7 @@ uint32_t*RTC= (uint32_t *)0x60000700;
 // Adapt the following to your own needs, depending on however you make use of RTC memory somewhere else
 #define RTC_MEMORY_OFFSET LongDeepSleep::UsedRTCDataSize()
 
-void WADeepsleep_WEMOS_D1_mini_v3(uint64 t_us)
+void WADeepsleep_WEMOS_D1_mini_v3(uint64_t sleep_time_us)
 {
 	uint32_t wakeupReason=5;
 	ESP.rtcUserMemoryWrite((RTC_MEMORY_OFFSET+4)>>2, (uint32_t*)&wakeupReason, sizeof(wakeupReason));
@@ -19,7 +19,7 @@ void WADeepsleep_WEMOS_D1_mini_v3(uint64 t_us)
     RTC[17] = 4;
     RTC[2] = 1<<20;
     ets_delay_us(10);
-    RTC[1]= RTC[7] + (45 * (t_us >> 8));
+    RTC[1]= RTC[7] + (45 * (sleep_time_us >> 8));
     RTC[3] = 0x640C8;
     RTC[4]= 0;
     RTC[6] = 0x18;
