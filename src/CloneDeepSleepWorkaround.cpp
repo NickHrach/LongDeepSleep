@@ -33,11 +33,11 @@ void WADeepsleep_WEMOS_D1_mini_v3(uint64_t sleep_time_us)
 
 // Workes only once, then the restartflag is cleared! 
 // this should be called as early as possible in your code, keep the result somewhere else and use it for any further required restart reason usage
-boolean isComingFromDeepsleep_WEMOS_D1_mini_v3()
+bool isComingFromDeepsleep_WEMOS_D1_mini_v3()
 {
 	uint32_t wakeupReason=0;
 	ESP.rtcUserMemoryRead((RTC_MEMORY_OFFSET+4)>>2, (uint32_t*)&wakeupReason, sizeof(wakeupReason));
-	boolean deepSleepWakeup=(wakeupReason==5);
+	bool deepSleepWakeup=(wakeupReason==5);
 	wakeupReason=0;
 	ESP.rtcUserMemoryWrite((RTC_MEMORY_OFFSET+4)>>2, (uint32_t*)&wakeupReason, sizeof(wakeupReason));
 	return deepSleepWakeup;

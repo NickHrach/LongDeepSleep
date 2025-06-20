@@ -20,7 +20,7 @@ constexpr uint64_t MICROSECONDS_PER_SECOND = 1000000ULL;
     D_println(F("\n----------------------------------"));
 	D_print(F("resetCounter:")); D_println(rebootCounter());
     D_print(F("millis:")); D_println(millis());
-	boolean isComingFromDeepSleep=false;
+	bool isComingFromDeepSleep=false;
 	if (cloneWorkaround != NO_WORKAROUND)
 	{
 		D_println("Check for workaround reboot reason");
