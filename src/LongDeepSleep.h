@@ -45,8 +45,8 @@ public:
      * @brief Differrent types of workarounds for deepsleep problems with clone modules
      */
 	enum CloneWorkaround{
-		NO_WORKAROUND = 0, 						///< Will never be seen as then the ESP will go into deep sleep
-		WEMOS_D1_V3_CLONE = 1, 			///< No time client specified when creating class longdeepsleep, hence this function is not available.
+		NO_WORKAROUND = 0, 				///< This is standard solution, no workaround is applied.
+		WEMOS_D1_V3_CLONE = 1, 			///< This worked for my Wemos D1 mini V3 clones
 		UNKNOWN = 2
 	};
 
@@ -54,6 +54,7 @@ public:
    /**
      * @brief Second constructor for clone modules with deep sleep problems
      * 
+     * @param param_cloneWorkaround. This is to selected the clone workaround. Use one of the enums form CloneWorkaround.
      * @param ssid WiFi SSID. (optional in case no absolute time for deep sleep is required.)
      * @param password WiFi password. (optional in case no absolute time for deep sleep is required.)
      * @param ntpClient pointer to a configured NTPClient instance. (optional in case no absolute time for deep sleep is rquired.)
