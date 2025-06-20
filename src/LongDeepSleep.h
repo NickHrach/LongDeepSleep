@@ -30,6 +30,7 @@ public:
         ABSOLUTE_TIME_CHECK_FAILED = -3   ///< Wake-up for absolute time failed due to time server/WiFi issues.
     };
 	
+	
 	/**
      * @brief Return codes for performLongDeepSleepUntil(int).
      */
@@ -40,6 +41,25 @@ public:
 		SPECIFIED_TIME_IN_PAST = 1 		///< The specified until time stamp lies in the past, hence sleep not required, do whatever you want to do then.
 	};
 
+/**
+     * @brief Differrent types of workarounds for deepsleep problems with clone modules
+     */
+	enum CloneWorkaround{
+		NO_WORKAROUND = 0, 						///< Will never be seen as then the ESP will go into deep sleep
+		WEMOS_D1_V3_CLONE = 1, 			///< No time client specified when creating class longdeepsleep, hence this function is not available.
+		UNKNOWN = 2
+	};
+
+
+   /**
+     * @brief Second constructor for clone modules with deep sleep problems
+     * 
+     * @param ssid WiFi SSID. (optional in case no absolute time for deep sleep is required.)
+     * @param password WiFi password. (optional in case no absolute time for deep sleep is required.)
+     * @param ntpClient pointer to a configured NTPClient instance. (optional in case no absolute time for deep sleep is rquired.)
+     */
+    LongDeepSleep(CloneWorkaround param_cloneWorkaround, const char* ssid = nullptr, const char* password = nullptr, NTPClient* ntpClient = nullptr);
+
     /**
      * @brief Constructor.
      * 
@@ -47,7 +67,8 @@ public:
      * @param password WiFi password. (optional in case no absolute time for deep sleep is required.)
      * @param ntpClient pointer to a configured NTPClient instance. (optional in case no absolute time for deep sleep is rquired.)
      */
-    LongDeepSleep(const char* ssid = nullptr, const char* password = nullptr, NTPClient* ntpClient = nullptr);
+    LongDeepSleep(const char* ssid = nullptr, const char* password = nullptr, NTPClient* ntpClient = nullptr)
+	:LongDeepSleep(NO_WORKAROUND,ssid,password,ntpClient){}
 
     /**
      * @brief Checks whether the device woke up from deep sleep and handles state. 
@@ -108,6 +129,11 @@ public:
         maxQuickConnectCycles = quickConnectCycles;
         maxWifiWaitCycles = wifiWaitCycles;
     }
+	
+	uint32_t rebootCounter(){return rtcData.rebootCounter;}
+	void resetRebootCounter(){rtcData.rebootCounter=0;}
+	
+	static uint32_t UsedRTCDataSize(){return sizeof(UsedRTCData);}
 
 private:
     void saveRTCAndCallLongDeepSleep(uint64_t sleepTimeSec);
@@ -115,8 +141,9 @@ private:
     void writeRTCmemory();
     void saveWifiInformation();
     void resetWifi();
-
-    uint32_t calculateCRC32(const uint8_t *data, size_t length);
+	void resetRTCdata();
+    
+	uint32_t calculateCRC32(const uint8_t *data, size_t length);
 
     bool RTCmemoryValid = false;
     int sleepTimeUntilWifiReconnectSec = 60 * 60;
@@ -127,14 +154,17 @@ private:
     const char* wifiSsid;
     const char* wifiPassword;
     NTPClient* timeClient;
+	
+	CloneWorkaround cloneWorkaround = NO_WORKAROUND;
 
     /**
      * @brief RTC memory structure to persist state across deep sleep.
      */
-    struct {
+    struct UsedRTCData{
         uint32_t crc32;                        ///< CRC checksum.
-        uint64_t remainingSleepTimeUs;         ///< Remaining sleep time in microseconds.
-        uint32_t sleepUntilEpocheTime = 0;     ///< Absolute wake time (epoch).
+        uint32_t rebootCounter;				   ///< counts numbers of reboots. Is increased in constructor after reading from RTC memory. Needs to be reset by user by calling resetRebootCounter()
+		uint64_t remainingSleepTimeUs;         ///< Remaining sleep time in microseconds.
+        uint32_t sleepUntilEpocheTime;     	   ///< Absolute wake time (epoch).
         WiFiState wifiState;                   ///< State needed to quickly reconnect to WiFi.
     } rtcData;
 };
