@@ -9,10 +9,12 @@
 #define D_printf(...)      Serial.printf(__VA_ARGS__)
 #define D_write(...)       Serial.write(__VA_ARGS__)
 #define D_println(...)     Serial.println(__VA_ARGS__)
+#define D_flush()          Serial.flush()
 #else
 #define D_SerialBegin(...)
 #define D_print(...)
 #define D_printf(...)
 #define D_write(...)
 #define D_println(...)
+#define D_flush()
 #endif
