@@ -34,6 +34,9 @@ During development, I encountered several challenges related to deep sleep on ES
 - **Fast WiFi reconnection**:  
   A dedicated function restores the WiFi connection quickly and reliably without scanning all networks again.
 
+- **Support Wemos D1 clones with weak flash leading to "zombie mode" after deep sleep**:  
+  Seems as if a large number of these boards are available and lead to this issue reported here https://github.com/esp8266/Arduino/issues/6007.
+  When recenlty be confronted with one of these I found a solution for it and added it to this library. As it might not work for otheres there is an option to add additional workarounds. In order to make usre of it you need to use the second constructor of class LongDeepSleep with first parameter one of the CloneWorkAround enum values.
 ---
 
 This library abstracts these patterns into a simple interface, making it easier to build reliable, ultra-low-power projects based on ESP8266 (and ESP32).
@@ -152,3 +155,7 @@ Or for detailed explanation look at the automatically generated Doxygen dokument
 - https://randomnerdtutorials.com/esp8266-nodemcu-date-time-ntp-client-server-arduino/
 	
     Overview over NTP client usage. Most gateway devices like Fritzbox are also able to be used as local time server. 
+	
+- https://github.com/esp8266/Arduino/issues/6007.
+  
+  Issue thread about ESP clones not waking up after deep sleep. there seem to be many different devices needing different solutions. I only integrated one solution that worked for my specific "Wemos D1 mini V3" clones. I am open to add more in case you provide the tested solution.
