@@ -42,3 +42,25 @@ bool isComingFromDeepsleep_WEMOS_D1_mini_v3()
 	ESP.rtcUserMemoryWrite((RTC_MEMORY_OFFSET+4)>>2, (uint32_t*)&wakeupReason, sizeof(wakeupReason));
 	return deepSleepWakeup;
 }
+
+// This hee for ESP-01 modules. never tested as I don't have these available.
+#define ets_wdt_disable ((void (*)(void))0x400030f0)
+
+#define _R (uint32_t *)0x60000700
+void WADeepsleep_ESP01(uint64_t time)
+{
+	ets_wdt_disable();
+	*(_R + 4) = 0;
+	*(_R + 17) = 4;
+	*(_R + 1) = *(_R + 7) + 5;
+	*(_R + 6) = 8;
+	*(_R + 2) = 1 << 20;
+	ets_delay_us(10);
+	*(_R + 39) = 0x11;
+	*(_R + 40) = 3;
+	*(_R) &= 0xFCF;
+	*(_R + 1) = *(_R + 7) + (45*(time >> 8));
+	*(_R + 16) = 0x7F;
+	*(_R + 2) = 1 << 20;
+	__asm volatile ("waiti 0");
+}
