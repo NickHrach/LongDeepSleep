@@ -132,7 +132,7 @@ constexpr uint64_t MICROSECONDS_PER_SECOND = 1000000ULL;
     */
 	// next line is for test&debug purposes only:
 	D_flush();
-	//sleepTimeUs=5000000;
+	sleepTimeUs=5000000;
 	
 	if (cloneWorkaround == WEMOS_D1_V3_CLONE)
 	{

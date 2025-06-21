@@ -47,7 +47,8 @@ public:
 	enum CloneWorkaround{
 		NO_WORKAROUND = 0, 				///< This is standard solution, no workaround is applied.
 		WEMOS_D1_V3_CLONE = 1, 			///< This worked for my Wemos D1 mini V3 clones
-		UNKNOWN = 2
+		ESP01_MODULE = 2, 			    ///< esp01 modules, not tested yet. Just copy/pasted code from here: https://github.com/nokxs/esp8266-alternative-deep-sleep
+		UNKNOWN = 3
 	};
 
 
