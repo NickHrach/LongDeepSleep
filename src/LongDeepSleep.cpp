@@ -138,6 +138,10 @@ constexpr uint64_t MICROSECONDS_PER_SECOND = 1000000ULL;
 	{
 		WADeepsleep_WEMOS_D1_mini_v3(sleepTimeUs);
 	}
+	else if (cloneWorkaround == WEMOS_D1_V3_CLONE)
+	{
+		WADeepsleep_ESP01(sleepTimeUs);	
+	}
 	else // if no workaround then use standard implementation
 	{
 		if (rtcData.remainingSleepTimeUs)
