@@ -132,9 +132,29 @@ public:
         maxWifiWaitCycles = wifiWaitCycles;
     }
 	
+	/**
+     * @brief Releases WiFi to conserve power.
+     * 
+     * In case you want to know how often the ESP reboots until you manually reset the counter, you can get the current value via this function.
+	 * The counter is increased by one every time the constructor of this class is called after the value was restored from RTC memory.
+	 * Please note that you need to manually reset the value by function resetRebootCounter() whenever you need to.
+     */
 	uint32_t rebootCounter(){return rtcData.rebootCounter;}
+	/**
+     * @brief Releases WiFi to conserve power.
+     * 
+     * This function resets an internal counter to zero. 
+	 * The counter is increased by one every time the constructor of this class is called after the value was restored from RTC memory.
+     */
 	void resetRebootCounter(){rtcData.rebootCounter=0;}
 	
+	/**
+     * @brief Releases WiFi to conserve power.
+     * 
+     * Returns the size of the RTC memory that is used internally. You can use this to offset your own RTC memory usage in case you need to store something else to survive reboots.
+	 * Be aware that the workarounds for weak ESP8266 modules need another 4 bytes of memory.
+	 * They are using the same function as well. You might have a look into file CloneDeepSleepWorkaround.cpp for a hint how to use it.
+     */
 	static uint32_t UsedRTCDataSize(){return sizeof(UsedRTCData);}
 
 private:
