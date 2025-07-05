@@ -133,7 +133,7 @@ public:
     }
 	
 	/**
-     * @brief Releases WiFi to conserve power.
+     * @brief Returns a number that is increased in each call of checkWakeUp and also saved in RTC memory.
      * 
      * In case you want to know how often the ESP reboots until you manually reset the counter, you can get the current value via this function.
 	 * The counter is increased by one every time the constructor of this class is called after the value was restored from RTC memory.
@@ -141,15 +141,15 @@ public:
      */
 	uint32_t rebootCounter(){return rtcData.rebootCounter;}
 	/**
-     * @brief Releases WiFi to conserve power.
+     * @brief Resets the reboot counter to any other value.
      * 
-     * This function resets an internal counter to zero. 
+     * This function resets an internal counter to a specified value. Default is zero. 
 	 * The counter is increased by one every time the constructor of this class is called after the value was restored from RTC memory.
      */
-	void resetRebootCounter(){rtcData.rebootCounter=0;}
+	void resetRebootCounter(uint32_t resetValue=0){rtcData.rebootCounter=resetValue;}
 	
 	/**
-     * @brief Releases WiFi to conserve power.
+     * @brief Returns RTC memory size used by this library.
      * 
      * Returns the size of the RTC memory that is used internally. You can use this to offset your own RTC memory usage in case you need to store something else to survive reboots.
 	 * Be aware that the workarounds for weak ESP8266 modules need another 4 bytes of memory.

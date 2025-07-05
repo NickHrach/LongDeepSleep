@@ -131,9 +131,15 @@ constexpr uint64_t MICROSECONDS_PER_SECOND = 1000000ULL;
     Serial.println(F("#####################"));
     */
 	// next line is for test&debug purposes only:
-	D_flush();
+	/*
 	sleepTimeUs=5000000;
-	
+	D_println(F(" !!!!! ATTENTION: SLEEPING ONLY 5 SECS for TEST PURPOSES !!!!"));
+	*/
+	D_flush();
+	if (cloneWorkaround!=NO_WORKAROUND)
+	{
+		D_print(F("Workaround:"));D_println(cloneWorkaround);
+	}
 	if (cloneWorkaround == WEMOS_D1_V3_CLONE)
 	{
 		WADeepsleep_WEMOS_D1_mini_v3(sleepTimeUs);
