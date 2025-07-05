@@ -11,7 +11,7 @@
 #define D_println(...)     Serial.println(__VA_ARGS__)
 #define D_flush()          Serial.flush()
 #else
-#define D_SerialBegin(...)
+#define D_init(...) 
 #define D_print(...)
 #define D_printf(...)
 #define D_write(...)
