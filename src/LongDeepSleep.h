@@ -164,6 +164,7 @@ private:
     void saveWifiInformation();
     void resetWifi();
 	void resetRTCdata();
+	uint64_t deepSleepMax();
     
 	uint32_t calculateCRC32(const uint8_t *data, size_t length);
 

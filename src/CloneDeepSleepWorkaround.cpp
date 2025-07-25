@@ -6,11 +6,17 @@ uint32_t*RTC= (uint32_t *)0x60000700;
 // Adapt the following to your own needs, depending on however you make use of RTC memory somewhere else
 #define RTC_MEMORY_OFFSET LongDeepSleep::UsedRTCDataSize()
 
+// I just observed that my device sometimes immediately woke up when the sleep_time_us value was too high.
+// This max value always worked during my tests, although it might be a little bit lower than required
+// It's 12216795648 usec = 3hrs + 23 mins + ~37 secs
+// Be aware that this workaround has no RTC clock adjustment for temperature drifts!
+const uint64_t MAX_RTC1_VALUE=0x80000000;
+extern const uint64_t WADeepsleep_WEMOS_D1_mini_v3_MAX_SLEEP_TIME=(MAX_RTC1_VALUE/45)<<8;
+
 void WADeepsleep_WEMOS_D1_mini_v3(uint64_t sleep_time_us)
 {
 	uint32_t wakeupReason=5;
 	ESP.rtcUserMemoryWrite((RTC_MEMORY_OFFSET+4)>>2, (uint32_t*)&wakeupReason, sizeof(wakeupReason));
-	Serial.flush();
     RTC[4] = 0;
     *RTC = 0;
     RTC[1]=100;
@@ -19,7 +25,12 @@ void WADeepsleep_WEMOS_D1_mini_v3(uint64_t sleep_time_us)
     RTC[17] = 4;
     RTC[2] = 1<<20;
     ets_delay_us(10);
-    RTC[1]= RTC[7] + (45 * (sleep_time_us >> 8));
+	uint64_t target = RTC[7] + (45 * (sleep_time_us >> 8));
+	if (target > MAX_RTC1_VALUE)
+	{
+		target = MAX_RTC1_VALUE;
+	}
+    RTC[1] = target;
     RTC[3] = 0x640C8;
     RTC[4]= 0;
     RTC[6] = 0x18;
@@ -43,7 +54,7 @@ bool isComingFromDeepsleep_WEMOS_D1_mini_v3()
 	return deepSleepWakeup;
 }
 
-// This hee for ESP-01 modules. never tested as I don't have these available.
+// This here is for ESP-01 modules. Never tested as I don't have these available.
 #define ets_wdt_disable ((void (*)(void))0x400030f0)
 
 #define _R (uint32_t *)0x60000700

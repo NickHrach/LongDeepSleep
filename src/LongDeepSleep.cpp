@@ -96,11 +96,19 @@ constexpr uint64_t MICROSECONDS_PER_SECOND = 1000000ULL;
     return -1; // this will never happen as the last function call will end in deep sleep.
   }
 
+  uint64_t LongDeepSleep::deepSleepMax()
+  {
+	  if (cloneWorkaround == WEMOS_D1_V3_CLONE)
+	  {
+		  return WADeepsleep_WEMOS_D1_mini_v3_MAX_SLEEP_TIME;
+	  }
+	  return ESP.deepSleepMax()-10000000ULL;
+  }
 
   void LongDeepSleep::saveRTCAndCallLongDeepSleep(uint64_t sleepTimeUs)
   {
 	D_println(F("saveRTCAndCallLongDS"));
-    uint64_t maxValue=ESP.deepSleepMax()-10000000ULL; // make this 5e6 for 5 secs test&debug purposes // reduce by 10 sec to be on the save side.
+    uint64_t maxValue= deepSleepMax();
   
     if (sleepTimeUs>maxValue)
     {
@@ -119,8 +127,8 @@ constexpr uint64_t MICROSECONDS_PER_SECOND = 1000000ULL;
     D_println(millis());
     D_println(F("#####################"));
     /*
-	// Used the this block to see how much runtime differs, when debug messages are not printed to serial.
-	// It's about 10ms only.
+	// Used this block to see how much runtime differs, when debug messages are not printed to serial.
+	// During my tests it was about 10ms only.
 	// My measurements for LongDeepSleepExample (with debug on)
 	// ~60ms when directly extending long deep sleep
 	// ~1250ms when checking time from timeserver and then returning into deepsleep in case Wifi can be directly restored
@@ -270,13 +278,19 @@ constexpr uint64_t MICROSECONDS_PER_SECOND = 1000000ULL;
       timeClient->begin();
       if (!timeClient->forceUpdate())
       {
-        D_println(F("Time server not reachable!"))  ;
-		if (failureSleepSecs>0)
-        {
-          D_printf("Try again in %u seconds.", failureSleepSecs);
-          
-          // no need to recalculate anything or rewrite RTC memory, hence calling directly ESP.deepSleep.
-          ESP.deepSleep(failureSleepSecs*MICROSECONDS_PER_SECOND, RF_DEFAULT );
+		// try again:
+		delay(10);
+		timeClient->begin();
+		if (!timeClient->forceUpdate())
+		{
+			D_println(F("Time server not reachable!"));
+			if (failureSleepSecs>0)
+			{
+			  D_printf("Try again in %u seconds.", failureSleepSecs);
+			  
+			  // no need to recalculate anything or rewrite RTC memory, hence calling directly ESP.deepSleep.
+			  ESP.deepSleep(failureSleepSecs*MICROSECONDS_PER_SECOND, RF_DEFAULT );
+			}
 		}
       }
     #ifdef _DEBUG_
